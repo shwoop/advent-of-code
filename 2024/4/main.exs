@@ -12,11 +12,13 @@ defmodule Unions do
   end
 end
 
+@type IterState :: %{score: intiger, expected_x_indices: array, expected_m_indices: array, expected_a_indices: array, expected_s_indices: array}
 defmodule Iter.State do
   defstruct score: 0, expected_x_indices: [], expected_m_indices: [], expected_a_indices: [], expected_s_indices: []
 end
 
 defmodule StateTransitions do
+  @spec vertical_xmas(IterState, array, aray, array, array) :: IterState
   def vertical_xmas(iter, x_indices, m_indices, a_indices, s_indices) do
     %Iter.State{
       expected_m_indices: x_indices,
@@ -26,6 +28,7 @@ defmodule StateTransitions do
     }
   end
 
+  @spec vertical_samx(IterState, array, aray, array, array) :: IterState
   def vertical_samx(iter, x_indices, m_indices, a_indices, s_indices) do
     %Iter.State{
       expected_a_indices: s_indices,
@@ -42,6 +45,7 @@ defmodule StateTransitions do
       n, acc -> [n+1 | acc]
     end)
   end
+  @spec diagonal_right_xmas(IterState, array, aray, array, array) :: IterState
   def diagonal_right_xmas(iter, x_indices, m_indices, a_indices, s_indices) do
     %Iter.State{
       expected_m_indices: shift_right(x_indices),
@@ -50,6 +54,7 @@ defmodule StateTransitions do
       score: iter.score + ((Unions.find_union(iter.expected_s_indices, s_indices) |> Enum.count))
     }
   end
+  @spec diagonal_right_samx(IterState, array, aray, array, array) :: IterState
   def diagonal_right_samx(iter, x_indices, m_indices, a_indices, s_indices) do
     %Iter.State{
       expected_a_indices: shift_right(s_indices),
@@ -66,6 +71,7 @@ defmodule StateTransitions do
       n, acc -> [n-1 | acc]
     end)
   end
+  @spec diagonal_left_xmas(IterState, array, aray, array, array) :: IterState
   def diagonal_left_xmas(iter, x_indices, m_indices, a_indices, s_indices) do
     %Iter.State{
       expected_m_indices: shift_left(x_indices),
@@ -74,6 +80,7 @@ defmodule StateTransitions do
       score: iter.score + (Unions.find_union(iter.expected_s_indices, s_indices) |> Enum.count)
     }
   end
+  @spec diagonal_left_samx(IterState, array, aray, array, array) :: IterState
   def diagonal_left_samx(iter, x_indices, m_indices, a_indices, s_indices) do
     %Iter.State{
       expected_a_indices: shift_left(s_indices),
@@ -93,6 +100,7 @@ defmodule Iter do
 end
 
 defmodule XmasScan do
+  @spec find_indices(string, grapheme) :: array(integer)
   def find_indices(str, char) do
     str
     |> String.graphemes
