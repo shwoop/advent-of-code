@@ -17,6 +17,6 @@ defmodule Day4pt2 do
   end
 
   def main(_args) do
-    IO.puts "poop"
+    IO.puts("poop")
   end
 end

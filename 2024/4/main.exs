@@ -138,14 +138,10 @@ defmodule XmasScan do
     %Iter{
       vertical_xmas: StateTransitions.vertical_xmas(%Iter.State{}, x_indices, [], [], []),
       vertical_samx: StateTransitions.vertical_samx(%Iter.State{}, [], [], [], s_indices),
-      diagonal_right_xmas:
-        StateTransitions.diagonal_right_xmas(%Iter.State{}, x_indices, [], [], []),
-      diagonal_right_samx:
-        StateTransitions.diagonal_right_samx(%Iter.State{}, [], [], [], s_indices),
-      diagonal_left_xmas:
-        StateTransitions.diagonal_left_xmas(%Iter.State{}, x_indices, [], [], []),
-      diagonal_left_samx:
-        StateTransitions.diagonal_left_samx(%Iter.State{}, [], [], [], s_indices)
+      diagonal_right_xmas: StateTransitions.diagonal_right_xmas(%Iter.State{}, x_indices, [], [], []),
+      diagonal_right_samx: StateTransitions.diagonal_right_samx(%Iter.State{}, [], [], [], s_indices),
+      diagonal_left_xmas: StateTransitions.diagonal_left_xmas(%Iter.State{}, x_indices, [], [], []),
+      diagonal_left_samx: StateTransitions.diagonal_left_samx(%Iter.State{}, [], [], [], s_indices)
     }
   end
 
@@ -213,6 +209,4 @@ result =
   |> File.stream!()
   |> Enum.reduce(nil, &XmasScan.scan/2)
 
-IO.puts(
-  "score is #{(Iter.score(result) + horizontal_samx + horizontal_xmas) |> Integer.to_string()}"
-)
+IO.puts("score is #{(Iter.score(result) + horizontal_samx + horizontal_xmas) |> Integer.to_string()}")
