@@ -3,19 +3,8 @@ file = "./2024/4/input.txt"
 
 input_length = 140
 
-horizontal = Regex.scan(~r'XMAS|SMAX', file) |> Enum.count
-IO.puts horizontal
-
-# inverted_file = "./2024/4/input.txt"
-# |> File.stream!
-# |> Stream.map(&String.trim/1)
-# |> Enum.map(&String.graphemes/1)
-# |> List.zip
-# |> Enum.map(&Tuple.to_list/1)
-# |> Enum.map(&Enum.join/1)
-# |> Enum.join("\n")
-# vertical = Regex.scan(~r'XMAS|SMAX', inverted_file) |> Enum.count
-# IO.puts vertical
+horizontal_xmas = (file |> String.split("XMAS") |> length) - 1
+horizontal_samx = (file |> String.split("SAMX") |> length) - 1
 
 defmodule Unions do
   def find_union(a, b) do
@@ -27,8 +16,8 @@ defmodule Iter.State do
   defstruct score: 0, expected_x_indices: [], expected_m_indices: [], expected_a_indices: [], expected_s_indices: []
 end
 
-defmodule Iter.State.VeritcalXMAS do
-  def calculate(iter, x_indices, m_indices, a_indices, s_indices) do
+defmodule StateTransitions do
+  def vertical_xmas(iter, x_indices, m_indices, a_indices, s_indices) do
     %Iter.State{
       expected_m_indices: x_indices,
       expected_a_indices: Unions.find_union(iter.expected_m_indices, m_indices),
@@ -36,10 +25,8 @@ defmodule Iter.State.VeritcalXMAS do
       score: iter.score + (Unions.find_union(iter.expected_s_indices, s_indices) |> Enum.count)
     }
   end
-end
 
-defmodule Iter.State.VeritcalSMAX do
-  def calculate(iter, x_indices, m_indices, a_indices, s_indices) do
+  def vertical_samx(iter, x_indices, m_indices, a_indices, s_indices) do
     %Iter.State{
       expected_a_indices: s_indices,
       expected_m_indices: Unions.find_union(iter.expected_a_indices, a_indices),
@@ -47,13 +34,61 @@ defmodule Iter.State.VeritcalSMAX do
       score: iter.score + (Unions.find_union(iter.expected_x_indices, x_indices) |> Enum.count)
     }
   end
+
+  def shift_right(list) do
+    list
+    |> Enum.reduce([], fn
+      140, acc -> acc
+      n, acc -> [n+1 | acc]
+    end)
+  end
+  def diagonal_right_xmas(iter, x_indices, m_indices, a_indices, s_indices) do
+    %Iter.State{
+      expected_m_indices: shift_right(x_indices),
+      expected_a_indices: shift_right(Unions.find_union(iter.expected_m_indices, m_indices)),
+      expected_s_indices: shift_right(Unions.find_union(iter.expected_a_indices, a_indices)),
+      score: iter.score + ((Unions.find_union(iter.expected_s_indices, s_indices) |> Enum.count))
+    }
+  end
+  def diagonal_right_samx(iter, x_indices, m_indices, a_indices, s_indices) do
+    %Iter.State{
+      expected_a_indices: shift_right(s_indices),
+      expected_m_indices: shift_right(Unions.find_union(iter.expected_a_indices, a_indices)),
+      expected_x_indices: shift_right(Unions.find_union(iter.expected_m_indices, m_indices)),
+      score: iter.score + ((Unions.find_union(iter.expected_x_indices, x_indices)) |> Enum.count)
+    }
+  end
+
+  def shift_left(list) do
+    list
+    |> Enum.reduce([], fn
+      0, acc -> acc
+      n, acc -> [n-1 | acc]
+    end)
+  end
+  def diagonal_left_xmas(iter, x_indices, m_indices, a_indices, s_indices) do
+    %Iter.State{
+      expected_m_indices: shift_left(x_indices),
+      expected_a_indices: shift_left(Unions.find_union(iter.expected_m_indices, m_indices)),
+      expected_s_indices: shift_left(Unions.find_union(iter.expected_a_indices, a_indices)),
+      score: iter.score + (Unions.find_union(iter.expected_s_indices, s_indices) |> Enum.count)
+    }
+  end
+  def diagonal_left_samx(iter, x_indices, m_indices, a_indices, s_indices) do
+    %Iter.State{
+      expected_a_indices: shift_left(s_indices),
+      expected_m_indices: shift_left(Unions.find_union(iter.expected_a_indices, a_indices)),
+      expected_x_indices: shift_left(Unions.find_union(iter.expected_m_indices, m_indices)),
+      score: iter.score + (Unions.find_union(iter.expected_x_indices, x_indices) |> Enum.count)
+    }
+  end
 end
 
 defmodule Iter do
-  defstruct vertical_xmas: %Iter.State{}, vertical_smax: %Iter.State{}
+  defstruct vertical_xmas: %Iter.State{}, vertical_samx: %Iter.State{}, diagonal_right_xmas: %Iter.State{}, diagonal_right_samx: %Iter.State{}, diagonal_left_xmas: %Iter.State{}, diagonal_left_samx: %Iter.State{}
 
   def score(iter) do
-    iter.vertical_xmas.score + iter.vertical_smax.score
+    iter.vertical_xmas.score + iter.vertical_samx.score + iter.diagonal_right_xmas.score + iter.diagonal_right_samx.score + iter.diagonal_left_xmas.score + iter.diagonal_left_samx.score
   end
 end
 
@@ -67,19 +102,30 @@ defmodule XmasScan do
   end
 
   def scan(row, nil) do
+    x_indices = find_indices(row, "X")
+    s_indices = find_indices(row, "S")
     %Iter{
-      vertical_xmas: %Iter.State{expected_m_indices: find_indices(row, "X")},
-      vertical_smax: %Iter.State{expected_s_indices: find_indices(row, "S")},
+      vertical_xmas: StateTransitions.vertical_xmas(%Iter.State{}, x_indices, [], [], []),
+      vertical_samx: StateTransitions.vertical_samx(%Iter.State{}, [], [], [], s_indices),
+      diagonal_right_xmas: StateTransitions.diagonal_right_xmas(%Iter.State{}, x_indices, [], [], []),
+      diagonal_right_samx: StateTransitions.diagonal_right_samx(%Iter.State{}, [], [], [], s_indices),
+      diagonal_left_xmas: StateTransitions.diagonal_left_xmas(%Iter.State{}, x_indices, [], [], []),
+      diagonal_left_samx: StateTransitions.diagonal_left_samx(%Iter.State{}, [], [], [], s_indices),
     }
   end
+
   def scan(row, iter) do
     x_indices = find_indices(row, "X")
     m_indices = find_indices(row, "M")
     a_indices = find_indices(row, "A")
     s_indices = find_indices(row, "S")
     %Iter{
-      vertical_xmas: Iter.State.VeritcalXMAS.calculate(iter.vertical_xmas, x_indices, m_indices, a_indices, s_indices),
-      vertical_smax: Iter.State.VeritcalSMAX.calculate(iter.vertical_xmas, x_indices, m_indices, a_indices, s_indices),
+      vertical_xmas: StateTransitions.vertical_xmas(iter.vertical_xmas, x_indices, m_indices, a_indices, s_indices),
+      vertical_samx: StateTransitions.vertical_samx(iter.vertical_samx, x_indices, m_indices, a_indices, s_indices),
+      diagonal_right_xmas: StateTransitions.diagonal_right_xmas(iter.diagonal_right_xmas, x_indices, m_indices, a_indices, s_indices),
+      diagonal_right_samx: StateTransitions.diagonal_right_samx(iter.diagonal_right_samx, x_indices, m_indices, a_indices, s_indices),
+      diagonal_left_xmas: StateTransitions.diagonal_left_xmas(iter.diagonal_left_xmas, x_indices, m_indices, a_indices, s_indices),
+      diagonal_left_samx: StateTransitions.diagonal_left_samx(iter.diagonal_left_samx, x_indices, m_indices, a_indices, s_indices),
     }
   end
 end
@@ -88,4 +134,4 @@ result = "./2024/4/input.txt"
 |> File.stream!
 |> Enum.reduce(nil, &XmasScan.scan/2)
 
-IO.puts Iter.score(result)
+IO.puts "score is #{Iter.score(result) + horizontal_samx + horizontal_xmas |> Integer.to_string}"
