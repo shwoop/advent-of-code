@@ -16,9 +16,13 @@ defmodule Day4pt2 do
     :world
   end
 
+  @spec main(any()) :: any()
   def main(_args) do
-    "./inputs.txt"
-    |> File.stream!()
-    |> Enum.reduce(nil, &XmasScan.scan/2)
+    %{score: score} =
+      "./inputs.txt"
+      |> File.stream!()
+      |> Enum.reduce(nil, &XmasScan.scan/2)
+
+    IO.puts(score)
   end
 end

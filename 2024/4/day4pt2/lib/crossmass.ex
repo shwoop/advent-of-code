@@ -8,15 +8,13 @@ end
 defmodule XmasScanT do
   @type pattern :: :sas | :mas | :sam | :mam
   @type charmap :: %{required(integer) => String.t()}
-  # @type patternmap :: %{required(integer) => pattern}
   @type indipat :: {integer, pattern}
   @type indipats :: [indipat]
-
   @type chariter :: {String.t(), integer}
 end
 
 defmodule LineIter do
-  defstruct lookback: [], results: %{}
+  defstruct lookback: [], results: []
 
   @type t :: %__MODULE__{
           lookback: [XmasScanT.chariter()],
@@ -43,10 +41,10 @@ defmodule XmasScan do
     {cc, _} = nnn
 
     case {cc, c} do
-      {"s", "s"} -> {i, :sas}
-      {"m", "s"} -> {i, :mas}
-      {"s", "m"} -> {i, :sam}
-      {"m", "m"} -> {i, :mam}
+      {"S", "S"} -> {i, :sas}
+      {"M", "S"} -> {i, :mas}
+      {"S", "M"} -> {i, :sam}
+      {"M", "M"} -> {i, :mam}
       _ -> nil
     end
   end
@@ -62,7 +60,7 @@ defmodule XmasScan do
 
   def find_patterns(n, %LineIter{lookback: [nn | nnn]} = line_iter) do
     patterns =
-      case match_pattern(n, n, nnn) do
+      case match_pattern(n, nn, nnn) do
         nil -> line_iter.results
         x -> [x | line_iter.results]
       end
@@ -78,7 +76,7 @@ defmodule XmasScan do
       |> Enum.with_index()
       |> Enum.reduce(nil, &find_patterns/2)
 
-    li.a_rows
+    li.results
   end
 
   @spec find_indices(String.t(), String.t()) :: [integer]
@@ -92,55 +90,47 @@ defmodule XmasScan do
 
   @spec score(%Iter{}, [integer], [integer]) :: integer
   def score(iter, m_indices, s_indices) do
-    # mscore = iter.scoring_m
-    # |> Enum.reduce(0, fn i, acc ->
-    #   case Enum.member?(m_indices, i) do
-    #     true -> acc +1
-    #     false -> acc
-    #   end
-    # end)
-    # sscore = iter.scoring_s
-    # |> Enum.reduce(0, fn
-    #   i, acc when Enum.member?(s_indices, i) -> acc + 1
-    #   _, _ -> acc
-    # end)
-    # mscore + sscore
     ms = Unions.find_union(iter.scoring_m, m_indices) |> Enum.count()
     ss = Unions.find_union(iter.scoring_s, s_indices) |> Enum.count()
     ms + ss
   end
 
+  @spec potential_scores(XmasScanT.indipats(), [integer]) :: {[integer], [integer]}
+  def potential_scores(a_row, a_indices) do
+    a_row
+    |> Enum.filter(fn {i, _} -> i in a_indices end)
+    |> Enum.reduce({[], []}, fn
+      {i, :mam}, {m, s} -> {m, [i - 1, i + 1 | s]}
+      {i, :sam}, {m, s} -> {[i - 1 | m], [i + 1 | s]}
+      {i, :mas}, {m, s} -> {[i + 1 | m], [i - 1 | s]}
+      {i, :sas}, {m, s} -> {[i - 1, i + 1 | m], s}
+      _, _ -> nil
+    end)
+  end
+
   @spec scan(String.t(), %Iter{} | nil) :: %Iter{}
   def scan(row, nil) do
     i = %Iter{
-      #
       a_row: find_indices(row)
     }
 
-    IO.inspect(i)
     i
-
-    # score == iter.scoring_m U m_indices + iter.scoring_s U s_indices
-    # iter.a_row = find_patterns(row)
-    # iter.scoring_m = iter.a_row U a_indices : mas -> i-1 , mam -> {i-1, i+1}, sam -> i+1
-    # iter.scoring_s = iter.s_row U s_indices : sam -> i-1 , sas -> {i-1, i+1}, mas -> i+1
   end
 
   def scan(row, iter) do
     m_indices = find_indices(row, "M")
-    _a_indices = find_indices(row, "A")
+    a_indices = find_indices(row, "A")
     s_indices = find_indices(row, "S")
+
+    {potential_m, potential_s} = potential_scores(iter.a_row, a_indices)
 
     i = %Iter{
       a_row: find_indices(row),
-      score: iter.score + score(iter, m_indices, s_indices)
+      score: iter.score + score(iter, m_indices, s_indices),
+      scoring_m: potential_m,
+      scoring_s: potential_s
     }
 
-    IO.inspect(i)
     i
-    # score == iter.scoring_m U m_indices + iter.scoring_s U s_indices
-    # iter.a_row = find_patterns(row)
-    # iter.scoring_m = iter.a_row U a_indices : mas -> i-1 , mam -> {i-1, i+1}, sam -> i+1
-    # iter.scoring_s = iter.s_row U s_indices : sam -> i-1 , sas -> {i-1, i+1}, mas -> i+1
   end
 end
