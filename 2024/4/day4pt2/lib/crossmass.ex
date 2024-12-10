@@ -100,6 +100,7 @@ defmodule XmasScan do
 
   @spec potential_scores(XmasScanT.indipats(), [integer]) :: {[integer], [integer]}
   def potential_scores(a_row, a_indices) do
+    # This logic is wrong, we need to match BOTH not EITHER character to score ...
     a_row
     |> Enum.filter(fn {i, _} -> i in a_indices end)
     |> Enum.reduce({[], []}, fn
