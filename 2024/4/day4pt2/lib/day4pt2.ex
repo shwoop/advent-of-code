@@ -19,6 +19,6 @@ defmodule Day4pt2 do
   def main(_args) do
     "./inputs.txt"
     |> File.stream!()
-    |> Enum.redulce(nil, XmasScan.scan())
+    |> Enum.reduce(nil, &XmasScan.scan/2)
   end
 end

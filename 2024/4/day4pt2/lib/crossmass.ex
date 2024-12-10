@@ -7,12 +7,12 @@ end
 
 defmodule XmasScanT do
   @type pattern :: :sas | :mas | :sam | :mam
-  @type charmap :: %{required(integer) => string}
+  @type charmap :: %{required(integer) => String.t()}
   # @type patternmap :: %{required(integer) => pattern}
   @type indipat :: {integer, pattern}
   @type indipats :: [indipat]
 
-  @type chariter :: {string, integer}
+  @type chariter :: {String.t(), integer}
 end
 
 defmodule LineIter do
@@ -62,15 +62,15 @@ defmodule XmasScan do
 
   def find_patterns(n, %LineIter{lookback: [nn | nnn]} = line_iter) do
     patterns =
-      case match_pattern(n, nn, nnn) do
-        nil -> line_iter.a_row
-        x -> [x | line_iter.a_row]
+      case match_pattern(n, n, nnn) do
+        nil -> line_iter.results
+        x -> [x | line_iter.results]
       end
 
     %LineIter{lookback: [n | nn], results: patterns}
   end
 
-  @spec find_indices(string) :: [XmasScanT.indipat()]
+  @spec find_indices(String.t()) :: [XmasScanT.indipat()]
   def find_indices(str) do
     li =
       str
@@ -81,7 +81,7 @@ defmodule XmasScan do
     li.a_rows
   end
 
-  @spec find_indices(string, string) :: [integer]
+  @spec find_indices(String.t(), String.t()) :: [integer]
   def find_indices(str, char) do
     str
     |> String.graphemes()
@@ -110,12 +110,15 @@ defmodule XmasScan do
     ms + ss
   end
 
-  @spec scan(string, %Iter{} | nil) :: %Iter{}
+  @spec scan(String.t(), %Iter{} | nil) :: %Iter{}
   def scan(row, nil) do
-    %Iter{
+    i = %Iter{
       #
       a_row: find_indices(row)
     }
+
+    IO.inspect(i)
+    i
 
     # score == iter.scoring_m U m_indices + iter.scoring_s U s_indices
     # iter.a_row = find_patterns(row)
@@ -125,12 +128,12 @@ defmodule XmasScan do
 
   def scan(row, iter) do
     m_indices = find_indices(row, "M")
-    a_indices = find_indices(row, "A")
+    _a_indices = find_indices(row, "A")
     s_indices = find_indices(row, "S")
 
     i = %Iter{
       a_row: find_indices(row),
-      a_row: score(iter, m_indices, s_indices)
+      score: iter.score + score(iter, m_indices, s_indices)
     }
 
     IO.inspect(i)
