@@ -17,6 +17,8 @@ defmodule Day4pt2 do
   end
 
   def main(_args) do
-    IO.puts("poop")
+    "./inputs.txt"
+    |> File.stream!()
+    |> Enum.redulce(nil, XmasScan.scan())
   end
 end
