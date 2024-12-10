@@ -65,7 +65,10 @@ defmodule XmasScan do
         x -> [x | line_iter.results]
       end
 
-    %LineIter{lookback: [n | nn], results: patterns}
+    %LineIter{
+      lookback: [n | nn],
+      results: patterns
+    }
   end
 
   @spec find_indices(String.t()) :: [XmasScanT.indipat()]
