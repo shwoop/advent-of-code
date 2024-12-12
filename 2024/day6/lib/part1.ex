@@ -1,18 +1,6 @@
 defmodule Day6.Day1.Patrol do
   defp move(%Day6.State{pointing: :up, guard: {gx, gy}} = state) do
-    collisions =
-      state.objects
-      |> Enum.filter(fn
-        {^gx, y} when y < gy -> true
-        _ -> false
-      end)
-
-    collision =
-      collisions
-      |> Enum.reduce(fn
-        {_, y} = obj, {_, yy} when y > yy -> obj
-        _, acc -> acc
-      end)
+    collision = Day6.Objects.collide(:up, state.objects, state.guard)
 
     case collision do
       nil ->
@@ -39,19 +27,7 @@ defmodule Day6.Day1.Patrol do
   end
 
   defp move(%Day6.State{pointing: :right, guard: {gx, gy}} = state) do
-    collisions =
-      state.objects
-      |> Enum.filter(fn
-        {x, ^gy} when x > gx -> true
-        _ -> false
-      end)
-
-    collision =
-      collisions
-      |> Enum.reduce(fn
-        {x, _} = obj, {xx, _} when x < xx -> obj
-        _, acc -> acc
-      end)
+    collision = Day6.Objects.collide(:right, state.objects, state.guard)
 
     case collision do
       nil ->
@@ -88,17 +64,7 @@ defmodule Day6.Day1.Patrol do
   end
 
   defp move(%Day6.State{pointing: :down, guard: {gx, gy}} = state) do
-    collision =
-      state.objects
-      |> Enum.filter(fn
-        {^gx, y} when y > gy -> true
-        _ -> false
-      end)
-      |> Enum.reduce(nil, fn
-        first, nil -> first
-        {_, y} = obj, {_, yy} when y < yy -> obj
-        _, acc -> acc
-      end)
+    collision = Day6.Objects.collide(:down, state.objects, state.guard)
 
     case collision do
       nil ->
@@ -128,16 +94,7 @@ defmodule Day6.Day1.Patrol do
   end
 
   defp move(%Day6.State{pointing: :left, guard: {gx, gy}} = state) do
-    collision =
-      state.objects
-      |> Enum.filter(fn
-        {x, ^gy} when x < gx -> true
-        _ -> false
-      end)
-      |> Enum.reduce(fn
-        {x, _} = obj, {xx, _} when x > xx -> obj
-        _, acc -> acc
-      end)
+    collision = Day6.Objects.collide(:left, state.objects, state.guard)
 
     case collision do
       nil ->
@@ -191,5 +148,57 @@ defmodule Day6.Part1.Score do
     |> Enum.flat_map(&expand_path/1)
     |> MapSet.new()
     |> Enum.count()
+  end
+end
+
+defmodule Day6.Objects do
+  @spec collide(Day6.T.direction(), [Day6.T.coord()], Day6.T.coord()) :: Day6.T.coord() | nil
+  def collide(:up, objects, {gx, gy}) do
+    objects
+    |> Enum.filter(fn
+      {^gx, y} when y < gy -> true
+      _ -> false
+    end)
+    |> Enum.reduce(fn
+      {_, y} = obj, {_, yy} when y > yy -> obj
+      _, acc -> acc
+    end)
+  end
+
+  def collide(:right, objects, {gx, gy}) do
+    objects
+    |> Enum.filter(fn
+      {x, ^gy} when x > gx -> true
+      _ -> false
+    end)
+    |> Enum.reduce(fn
+      {x, _} = obj, {xx, _} when x < xx -> obj
+      _, acc -> acc
+    end)
+  end
+
+  def collide(:down, objects, {gx, gy}) do
+    objects
+    |> Enum.filter(fn
+      {^gx, y} when y > gy -> true
+      _ -> false
+    end)
+    |> Enum.reduce(nil, fn
+      first, nil -> first
+      {_, y} = obj, {_, yy} when y < yy -> obj
+      _, acc -> acc
+    end)
+  end
+
+  def collide(:left, objects, {gx, gy}) do
+    objects
+    |> Enum.filter(fn
+      {x, ^gy} when x < gx -> true
+      _ -> false
+    end)
+    |> Enum.reduce(fn
+      {x, _} = obj, {xx, _} when x > xx -> obj
+      _, acc -> acc
+    end)
   end
 end
