@@ -1,22 +1,20 @@
 defmodule Day6.T do
   @type coord :: {integer, integer}
-  @type direction :: :up | :down | :left | :right | :finished
+  @type direction :: :up | :down | :left | :right
 end
 
 defmodule Day6.Walk do
   defstruct direction: :up, start: nil, end: nil
 end
 
-maxwidth = 10
-maxdepth = 10
+defmodule Const do
+  def rowsize() do
+    130
+  end
+end
 
 defmodule Day6.LoadObjects do
-  defstruct guard: nil, objects: [], paths: [], pointing: :up
-
-  # @type t :: %__MODULE__{
-  #   guard: coord,
-  #   objects: [coord],
-  # }
+  defstruct guard: nil, objects: [], paths: [], pointing: :up, history: %{}
 
   @spec load(String.t()) :: %__MODULE__{}
   def load(filepath) do
@@ -64,30 +62,33 @@ end
 
 defmodule Day6.Patrol do
   def move(%Day6.LoadObjects{pointing: :up, guard: {gx, gy}} = state) do
-    collision =
+    collisions =
       state.objects
       |> Enum.filter(fn
         {^gx, y} when y < gy -> true
         _ -> false
       end)
+
+      collision = collisions
       |> Enum.reduce(fn
-        {_, y} = obj, {_, yy} when y < yy -> obj
+        {_, y} = obj, {_, yy} when y > yy -> obj
         _, acc -> acc
       end)
 
     case collision do
       nil ->
-        # todo: ad done last walk to edge of map
-        state
+        %{state | paths: [%Day6.Walk{direction: :up, start: state.guard, end: {gx, 0}} | state.paths]}
 
       {collisionx, collisiony} ->
         last_position = {collisionx, collisiony + 1}
-        IO.inspect(last_position)
+        visits = Map.get(state.history, last_position, "")
+        IO.puts "#{inspect(last_position)}: ^ #{visits}"
 
         move(%Day6.LoadObjects{
           pointing: :right,
           guard: last_position,
           objects: state.objects,
+          history: Map.put(state.history, last_position, "+" <> visits),
           paths: [
             %Day6.Walk{direction: :up, start: state.guard, end: last_position} | state.paths
           ]
@@ -96,34 +97,41 @@ defmodule Day6.Patrol do
   end
 
   def move(%Day6.LoadObjects{pointing: :right, guard: {gx, gy}} = state) do
-    collision =
+    collisions =
       state.objects
       |> Enum.filter(fn
         {x, ^gy} when x > gx -> true
         _ -> false
       end)
+
+      collision = collisions
       |> Enum.reduce(fn
-        {_, x} = obj, {_, xx} when x < xx -> obj
+        {x, _} = obj, {xx, _} when x < xx -> obj
         _, acc -> acc
       end)
 
     case collision do
       nil ->
-        # todo: ad done last walk to edge of map
-        state
+        %{state | paths: [%Day6.Walk{direction: :right, start: state.guard, end: {Const.rowsize - 1, gy}} | state.paths]}
 
       {collisionx, collisiony} ->
         last_position = {collisionx - 1, collisiony}
-        IO.inspect(last_position)
+               visits = Map.get(state.history, last_position, "")
+        IO.puts "#{inspect(last_position)}: > #{visits}"
+        case visits do
+          "" ->
+            move(%Day6.LoadObjects{
+              pointing: :down,
+              guard: last_position,
+              objects: state.objects,
+              history: Map.put(state.history, last_position, "+" <> visits),
+              paths: [
+                %Day6.Walk{direction: :right, start: state.guard, end: last_position} | state.paths
+              ]
+            })
+          _ -> nil
+            end
 
-        move(%Day6.LoadObjects{
-          pointing: :down,
-          guard: last_position,
-          objects: state.objects,
-          paths: [
-            %Day6.Walk{direction: :right, start: state.guard, end: last_position} | state.paths
-          ]
-        })
     end
   end
 
@@ -136,23 +144,24 @@ defmodule Day6.Patrol do
       end)
       |> Enum.reduce(nil, fn
         first, nil -> first
-        {_, y} = obj, {_, yy} when y > yy -> obj
+        {_, y} = obj, {_, yy} when y < yy -> obj
         _, acc -> acc
       end)
 
     case collision do
       nil ->
-        # todo: ad done last walk to edge of map
-        state
+        %{state | paths: [%Day6.Walk{direction: :down, start: state.guard, end: {gx, Const.rowsize - 1}} | state.paths]}
 
       {collisionx, collisiony} ->
         last_position = {collisionx, collisiony - 1}
-        IO.inspect(last_position)
+               visits = Map.get(state.history, last_position, "")
+        IO.puts "#{inspect(last_position)}: V #{visits}"
 
         move(%Day6.LoadObjects{
           pointing: :left,
           guard: last_position,
           objects: state.objects,
+          history: Map.put(state.history, last_position, "+" <> visits),
           paths: [
             %Day6.Walk{direction: :down, start: state.guard, end: last_position} | state.paths
           ]
@@ -168,23 +177,23 @@ defmodule Day6.Patrol do
         _ -> false
       end)
       |> Enum.reduce(fn
-        {_, x} = obj, {_, xx} when x > xx -> obj
+        {x, _} = obj, {xx, _} when x > xx -> obj
         _, acc -> acc
       end)
 
     case collision do
       nil ->
-        # todo: ad done last walk to edge of map
-        state
+        %{state | paths: [%Day6.Walk{direction: :left, start: state.guard, end: {0, gy}} | state.paths]}
 
       {collisionx, collisiony} ->
         last_position = {collisionx + 1, collisiony}
-        IO.inspect(last_position)
-
+               visits = Map.get(state.history, last_position, "")
+        IO.puts "#{inspect(last_position)}: < #{visits}"
         move(%Day6.LoadObjects{
           pointing: :up,
           guard: last_position,
           objects: state.objects,
+          history: Map.put(state.history, last_position, "+" <> visits),
           paths: [
             %Day6.Walk{direction: :left, start: state.guard, end: last_position} | state.paths
           ]
@@ -197,13 +206,37 @@ defmodule Day6.Patrol do
   end
 end
 
+
+defmodule Day6.Score do
+  @spec expand_path(%Day6.Walk{}) :: [Day6.T.coord()]
+  def expand_path(%Day6.Walk{direction: :up, start: {x1, y1}, end: {_, y2}}) do
+    for y <- y1..y2, do: {x1, y}
+  end
+  def expand_path(%Day6.Walk{direction: :down, start: {x1, y1}, end: {_, y2}}) do
+    for y <- y1..y2, do: {x1, y}
+  end
+  def expand_path(%Day6.Walk{direction: :left, start: {x1, y1}, end: {x2, _}}) do
+    for x <- x1..x2, do: {x, y1}
+  end
+  def expand_path(%Day6.Walk{direction: :right, start: {x1, y1}, end: {x2, _}}) do
+    for x <- x1..x2, do: {x, y1}
+  end
+
+  def score(paths) do
+    paths
+    |> Enum.flat_map(&expand_path/1)
+    |> MapSet.new
+    |> Enum.count
+  end
+end
+
 defmodule Day6.PrintScene do
   @spec print([Day6.T.coord()]) :: nil
   def print(objects) do
-    0..99
+    0..(Const.rowsize * Const.rowsize)
     |> Enum.reduce("", fn n, acc ->
-      y = (n / 10) |> trunc
-      x = rem(n, 10)
+      y = (n / Const.rowsize) |> trunc
+      x = rem(n, Const.rowsize)
 
       nl =
         if x == 0 and n != 0 do
@@ -224,25 +257,5 @@ defmodule Day6.PrintScene do
     |> IO.puts()
 
     nil
-  end
-
-  @spec print([Day6.T.coord()]) :: Nx.Tensor.t()
-  def tensor(objects) do
-    data =
-      0..99
-      |> Enum.reduce([], fn n, acc ->
-        y = (n / 10) |> trunc
-        x = rem(n, 10)
-
-        if {x, y} in objects do
-          acc ++ [1]
-        else
-          acc ++ [0]
-        end
-      end)
-
-    t = Nx.tensor(data) |> Nx.reshape({10, 10}, names: [:x, :y])
-    IO.inspect(t)
-    t
   end
 end
