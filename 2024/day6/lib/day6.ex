@@ -1,15 +1,11 @@
 defmodule Day6 do
   @spec main(any()) :: any()
   def main(_args) do
-    state = Day6.LoadObjects.load("./input.txt")
+    scene = Day6.Scene.load("./input.txt")
 
-    # IO.inspect objects
-    Day6.PrintScene.print(state.objects)
-    # Day6.PrintScene.tensor(state.objects)
+    # Day6.PrintScene.print(scene.objects)
 
-    final_state = Day6.Patrol.patrol(state)
-    score = Day6.Score.score(final_state.paths)
-    # IO.inspect(final_state)
-    IO.puts "final score #{Integer.to_string(score)}"
+    final_state = Day6.Day1.Patrol.patrol(%Day6.State{guard: scene.guard, objects: scene.objects})
+    IO.puts("final score #{Integer.to_string(Day6.Part1.Score.score(final_state.paths))}")
   end
 end
