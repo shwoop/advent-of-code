@@ -1,8 +1,3 @@
-defmodule Day5.T do
-  @type condition :: {integer, integer}
-  @type condition_mapping:: %{integer => [condition]}
-end
-
 defmodule Day5.ConditionMapping do
   def map_to_condition(str, nil) do
     {smaller, larger} = condition = Regex.run(~r"^(\d+)\|(\d+)$", str, capture: :all_but_first)
