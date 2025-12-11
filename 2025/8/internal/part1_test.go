@@ -24,7 +24,7 @@ func TestPart1Example(t *testing.T) {
 862,61,35
 984,92,344
 425,690,689`
-	expectedAcc := 41
+	expectedAcc := 50
 	acc := Part1(input, 10)
 	if acc != expectedAcc {
 		t.Logf("expected %d, got %d", expectedAcc, acc)

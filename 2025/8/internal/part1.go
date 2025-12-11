@@ -19,9 +19,7 @@ func Part1(in string, limit int) int {
 	points := []kdtree.Point{}
 
 	for s.Scan() {
-		line := s.Text()
-		p := parsePoint(line)
-		points = append(points, p)
+		points = append(points, parsePoint(s.Text()))
 	}
 	connections := NewUniqueConnectionCollection()
 	for i, pointA := range points {
@@ -34,16 +32,10 @@ func Part1(in string, limit int) int {
 
 	fmt.Printf("brute force: %d\n", len(connections.connections))
 
-	connections.LimitShortest(limit)
+	connections.Sort()
 
-	// for i := range 6 {
-	// 	fmt.Printf("con %d: %s\n", i+1, connections.connections[i])
-	// }
-
-	circuits := NewCircuits(points)
-	for _, con := range connections.connections {
-		circuits.ApplyConnection(con)
-	}
+	circuits := NewCircuits(points, limit)
+	circuits.ApplyConnections(connections.connections)
 
 	circuitCount := circuits.Count()
 	slices.Sort(circuitCount)
@@ -143,11 +135,10 @@ func (u *ConnectionCollector) Add(c KDConnection) {
 	}
 }
 
-func (u *ConnectionCollector) LimitShortest(limit int) {
+func (u *ConnectionCollector) Sort() {
 	slices.SortFunc(u.connections, func(a, b KDConnection) int {
 		return cmp.Compare(a.dist, b.dist)
 	})
-	u.connections = u.connections[:limit+1]
 }
 
 func (u *ConnectionCollector) String() string {
@@ -160,17 +151,28 @@ func (u *ConnectionCollector) String() string {
 
 type Circuits struct {
 	junctionBoxCircuits map[kdtree.Point]int
+	limit               int
+	cnt                 int
 }
 
-func NewCircuits(points []kdtree.Point) Circuits {
+func NewCircuits(points []kdtree.Point, limit int) Circuits {
 	jbc := make(map[kdtree.Point]int, len(points))
 	for i, point := range points {
 		jbc[point] = i + 1
 	}
-	return Circuits{jbc}
+	return Circuits{jbc, limit, 0}
 }
 
-func (c *Circuits) ApplyConnection(con KDConnection) {
+func (c *Circuits) ApplyConnections(connections []KDConnection) {
+	for i, con := range connections {
+		if i > c.limit {
+			return
+		}
+		c.applyConnection(con)
+	}
+}
+
+func (c *Circuits) applyConnection(con KDConnection) {
 	var from, to int
 	if c.junctionBoxCircuits[con.a] == c.junctionBoxCircuits[con.b] {
 		return
