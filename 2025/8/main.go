@@ -12,7 +12,13 @@ func main() {
 		slog.SetLogLoggerLevel(slog.LevelDebug)
 	}
 
-	internal.Part1(input, 1000)
+	limit := 1000
+	if os.Getenv("PART") == "2" {
+		slog.SetLogLoggerLevel(slog.LevelDebug)
+		limit = -1
+	}
+
+	internal.Do(input, limit)
 }
 
 //go:embed input.txt

@@ -1,6 +1,8 @@
 package internal
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestPart1Example(t *testing.T) {
 
@@ -24,8 +26,91 @@ func TestPart1Example(t *testing.T) {
 862,61,35
 984,92,344
 425,690,689`
-	expectedAcc := 50
-	acc := Part1(input, 10)
+	expectedAcc := 40
+	acc := Do(input, 10)
+	if acc != expectedAcc {
+		t.Logf("expected %d, got %d", expectedAcc, acc)
+		t.Fail()
+	}
+}
+
+func TestPart2Example(t *testing.T) {
+	input := `162,817,812
+57,618,57
+906,360,560
+592,479,940
+352,342,300
+466,668,158
+542,29,236
+431,825,988
+739,650,466
+52,470,668
+216,146,977
+819,987,18
+117,168,530
+805,96,715
+346,949,466
+970,615,88
+941,993,340
+862,61,35
+984,92,344
+425,690,689`
+
+	expectedAcc := 25272
+	acc := Do(input, -1)
+	if acc != expectedAcc {
+		t.Logf("expected %d, got %d", expectedAcc, acc)
+		t.Fail()
+	}
+}
+
+func TestPart1Example_Limit1(t *testing.T) {
+
+	input := `162,817,812
+57,618,57
+906,360,560
+592,479,940
+352,342,300
+466,668,158
+542,29,236
+431,825,988
+739,650,466
+52,470,668
+216,146,977
+819,987,18
+117,168,530
+805,96,715
+346,949,466
+970,615,88
+941,993,340
+862,61,35
+984,92,344
+425,690,689`
+	expectedAcc := 2
+	acc := Do(input, 1)
+	if acc != expectedAcc {
+		t.Logf("expected %d, got %d", expectedAcc, acc)
+		t.Fail()
+	}
+}
+
+func TestPart1Basic1(t *testing.T) {
+	input := `162,817,812
+425,690,689`
+	expectedAcc := 2
+	acc := Do(input, 10)
+	if acc != expectedAcc {
+		t.Logf("expected %d, got %d", expectedAcc, acc)
+		t.Fail()
+	}
+}
+
+func TestPart1Basic2(t *testing.T) {
+	input := `162,817,812
+431,825,988
+425,690,689`
+	expectedAcc := 3
+	acc := Do(input, 10)
 	if acc != expectedAcc {
 		t.Logf("expected %d, got %d", expectedAcc, acc)
 		t.Fail()
