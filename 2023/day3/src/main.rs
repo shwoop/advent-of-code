@@ -4,6 +4,7 @@ use std::io::BufReader;
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
 
+mod parts;
 mod part1;
 // mod part2;
 
