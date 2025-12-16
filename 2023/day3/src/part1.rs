@@ -1,5 +1,6 @@
 use regex::Regex;
 use std::io::BufRead;
+use tracing::debug;
 
 pub fn part1<R: BufRead>(reader: R) -> Result<usize, Box<dyn std::error::Error>> {
     let mut acc = 0;
@@ -9,7 +10,6 @@ pub fn part1<R: BufRead>(reader: R) -> Result<usize, Box<dyn std::error::Error>>
         let line = line.unwrap();
         let (mut part_numbers, parts) = parse_line(line.as_str());
 
-        println!("{:?} {:?}", part_numbers, parts);
         acc += check_collisions(line.len(), previous_row, &mut part_numbers, &parts);
 
         previous_row = Some((part_numbers, parts));
@@ -27,6 +27,7 @@ struct PartNumber {
 
 #[derive(Debug)]
 struct Part {
+    icon: char,
     location: usize,
 }
 
@@ -50,16 +51,49 @@ fn check_collisions(
                 // matched
                 acc += part_number.id;
                 parts_to_remove.push(i);
+
+                debug!("{} - {}", part_number.id, part.icon);
             }
         }
     }
 
+    // delete matched part numbers from current row before checking against other rows
+    parts_to_remove.reverse();
     for i in parts_to_remove {
         part_numbers.remove(i);
     }
 
-    // check previous row
-    // todo
+    if let Some((previous_part_numbers, previous_parts)) = previous_row {
+        // check previous row ids
+        for part_number in previous_part_numbers.iter() {
+            let mut from = part_number.from;
+            let to = part_number.to;
+            if from != 0 {
+                from -= 1
+            }
+            for part in parts.iter() {
+                if part.location >= from && part.location <= to {
+                    acc += part_number.id;
+                    debug!("{} - {}", part_number.id, part.icon);
+                }
+            }
+        }
+
+        // check previous row
+        for part_number in part_numbers {
+            let mut from = part_number.from;
+            let to = part_number.to;
+            if from != 0 {
+                from -= 1
+            }
+            for previous_part in previous_parts.iter() {
+                if previous_part.location >= from && previous_part.location <= to {
+                    debug!("{} - {}", part_number.id, previous_part.icon);
+                    acc += part_number.id;
+                }
+            }
+        }
+    }
 
     acc
 }
@@ -80,7 +114,10 @@ fn parse_line(line: &str) -> ParsedRow {
         if char == '.' || char.is_numeric() {
             continue;
         }
-        parts.push(Part { location: i })
+        parts.push(Part {
+            icon: char,
+            location: i,
+        })
     }
 
     (part_numbers, parts)
@@ -112,7 +149,7 @@ mod test_part_1 {
     }
 
     #[test]
-    fn partial_1() {
+    fn partial_id_before() {
         let input = r#"467..114..
 ...*......"#;
         let expected = 467;
@@ -123,8 +160,20 @@ mod test_part_1 {
         assert_eq!(result, expected);
     }
 
-        #[test]
-    fn partial_2() {
+    #[test]
+    fn partial_id_after() {
+        let input = r#"...*......
+..35..633."#;
+        let expected = 35;
+
+        let cur = Cursor::new(input.as_bytes());
+        let result = part1(cur).unwrap();
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn partial_same_line() {
         let input = r"617*......";
         let expected = 617;
 
