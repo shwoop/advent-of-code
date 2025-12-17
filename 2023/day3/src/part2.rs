@@ -22,15 +22,14 @@ pub fn part2<R: BufRead>(reader: R) -> Result<usize, Box<dyn std::error::Error>>
                 numbers_lookup.insert((x, y), part_number.id);
             }
         }
-        for part in parts.iter() {
-            if part.icon != '*' {
-                continue;
-            }
-            cogs.push(Cog {
-                x: part.location,
-                y: y,
+
+        cogs.extend(
+            parts.iter()
+            .filter(| part | -> bool { part.icon == '*' })
+            .map(| part | -> Cog {
+                Cog { x: part.location, y: y }
             })
-        }
+        );
     }
 
     for cog in cogs {
