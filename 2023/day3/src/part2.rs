@@ -1,5 +1,4 @@
-use crate::parts::{ParsedRow, Part, PartNumber, parse_line};
-use regex::{Match, Regex};
+use crate::parts::parse_line;
 use std::collections::{HashMap,HashSet};
 use std::io::BufRead;
 use std::vec;
@@ -10,19 +9,12 @@ struct Cog {
     y: usize,
 }
 
-struct Number {
-    n: usize,
-    xfrom: usize,
-    xto: usize,
-    y: usize,
-}
-
 pub fn part2<R: BufRead>(reader: R) -> Result<usize, Box<dyn std::error::Error>> {
     let mut acc = 0;
 
     let mut cogs = Vec::new();
 
-    let mut numbers: HashMap<(usize, usize), Number> = HashMap::new();
+    let mut numbers: HashMap<(usize, usize), usize> = HashMap::new();
 
     for (y, line) in reader.lines().enumerate() {
         let line = line.unwrap();
@@ -32,12 +24,7 @@ pub fn part2<R: BufRead>(reader: R) -> Result<usize, Box<dyn std::error::Error>>
             for x in part_number.from..part_number.to {
                 numbers.insert(
                     (x, y),
-                    Number {
-                        n: part_number.id,
-                        xfrom: part_number.from,
-                        xto: part_number.to,
-                        y: y,
-                    },
+                    part_number.id,
                 );
             }
         }
@@ -56,7 +43,7 @@ pub fn part2<R: BufRead>(reader: R) -> Result<usize, Box<dyn std::error::Error>>
         let touching_numbers= positions_around(cog.x, cog.y)
         .iter().map(| pos | -> usize {
             if let Some(n) = numbers.get(pos) {
-                return n.n;
+                return *n;
             }
             0
         })
@@ -111,7 +98,7 @@ mod test_part_2 {
 ......755.
 ...$.*....
 .664.598.."#;
-        let expected = 4361;
+        let expected = 467835;
 
         let cur = Cursor::new(input.as_bytes());
         let result = part2(cur).unwrap();
@@ -120,7 +107,7 @@ mod test_part_2 {
     }
 
     #[test]
-    fn partial_multiline() {
+    fn partial_multiline_1() {
         let input = r#"467..114..
 ...*......
 ..35..633."#;
@@ -131,6 +118,33 @@ mod test_part_2 {
 
         assert_eq!(result, expected);
     }
+
+    #[test]
+    fn partial_multiline_2() {
+        let input = r#"......755.
+...$.*....
+.664.598.."#;
+        let expected = 755 * 598;
+
+        let cur = Cursor::new(input.as_bytes());
+        let result = part2(cur).unwrap();
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn partial_multiline_nothing() {
+        let input = r#"......#...
+617*......
+.....+.58."#;
+        let expected = 0;
+
+        let cur = Cursor::new(input.as_bytes());
+        let result = part2(cur).unwrap();
+
+        assert_eq!(result, expected);
+    }
+
 
     #[rstest]
     #[case(r"617*......")]
