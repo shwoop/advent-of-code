@@ -1,90 +1,102 @@
-use std::{collections::HashMap, io::BufRead};
+use crate::parts::{ParsedRow, Part, PartNumber, parse_line};
+use regex::{Match, Regex};
+use std::collections::{HashMap,HashSet};
+use std::io::BufRead;
+use std::vec;
 //use tracing::debug;
 
-use crate::parts::{ParsedRow, Part, PartNumber, parse_line};
-
-struct FirstNumber {
-    pub id: usize,
-    pub from: usize,
-    pub to: usize,
-}
-
 struct Cog {
-    location: usize,
+    x: usize,
+    y: usize,
 }
 
-struct NumberWithCog {
-    first_number_id:  usize,
-    cog_location: usize,
-}
-
-impl FirstNumber {
-    fn touches(&self, cog_location: usize) -> Option<NumberWithCog> {
-        let mut from = self.from;
-        if from != 0 {
-            from -= 1;
-        }
-
-        if cog_location >= from && cog_location <= self.to {
-            return Some(NumberWithCog {
-                first_number_id: self.id,
-                cog_location: cog_location
-            });
-        }
-
-        None
-    }
-}
-
-impl NumberWithCog {
-    fn touches(&self, pn: &PartNumber) -> usize {
-        let mut from = pn.from;
-        if from != 0 {
-            from -= 1;
-        }
-
-        if self.cog_location >= from && self.cog_location <= pn.to {
-            return self.first_number_id * pn.id;
-        }
-
-        0
-    }
+struct Number {
+    n: usize,
+    xfrom: usize,
+    xto: usize,
+    y: usize,
 }
 
 pub fn part2<R: BufRead>(reader: R) -> Result<usize, Box<dyn std::error::Error>> {
     let mut acc = 0;
-    let mut previous_first_numbers: Vec<FirstNumber> = Vec::new();
-    let mut previous_number_with_cogs: Vec<NumberWithCog> = Vec::new();
+
+    let mut cogs = Vec::new();
+
+    let mut numbers: HashMap<(usize, usize), Number> = HashMap::new();
 
     for (y, line) in reader.lines().enumerate() {
         let line = line.unwrap();
+
         let (part_numbers, parts) = parse_line(line.as_str());
-
-        let cogs: Vec<&Part> = parts.iter().filter(|p| -> bool { p.icon == '*' }).collect();
-
-        for previous_number_with_cog in previous_number_with_cogs.iter() {
-            for part_number in part_numbers.iter() {
-                acc += previous_number_with_cog.touches(part_number);
+        for part_number in part_numbers.iter() {
+            for x in part_number.from..part_number.to {
+                numbers.insert(
+                    (x, y),
+                    Number {
+                        n: part_number.id,
+                        xfrom: part_number.from,
+                        xto: part_number.to,
+                        y: y,
+                    },
+                );
             }
         }
-
-        previous_number_with_cogs = Vec::new();
-        for previous_first_number in previous_first_numbers.iter() {
-            for cog in cogs.iter() {
-                match previous_first_number.touches(cog.location) {
-                    Some(pnwc)=> previous_number_with_cogs.push(pnwc),
-                    None => (),
-                }
+        for part in parts.iter() {
+            if part.icon != '*' {
+                continue;
             }
+            cogs.push(Cog {
+                x: part.location,
+                y: y,
+            })
         }
+    }
+
+    for cog in cogs {
+        let touching_numbers= positions_around(cog.x, cog.y)
+        .iter().map(| pos | -> usize {
+            if let Some(n) = numbers.get(pos) {
+                return n.n;
+            }
+            0
+        })
+        .filter(| n | -> bool {
+            *n != 0
+        })
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect::<Vec<usize>>();
+
+        if touching_numbers.len() != 2 {
+            continue
+        }
+
+        acc += touching_numbers[0] * touching_numbers[1];
     }
 
     Ok(acc)
 }
 
+fn positions_around(x:usize, y:usize) -> Vec<(usize,usize)> {
+    vec![
+        (x.saturating_sub(1), y.saturating_sub(1)),
+        (x, y.saturating_sub(1)),
+        (x + 1, y.saturating_sub(1)),
+
+        (x.saturating_sub(1), y),
+        // x,y
+        (x + 1, y),
+
+        (x.saturating_sub(1), y + 1),
+        (x, y + 1),
+        (x + 1,  y + 1),
+    ]
+}
+
 #[cfg(test)]
 mod test_part_2 {
     use super::*;
+    use rstest::rstest;
     use std::io::Cursor;
 
     #[test]
@@ -108,22 +120,11 @@ mod test_part_2 {
     }
 
     #[test]
-    fn partial_id_before() {
+    fn partial_multiline() {
         let input = r#"467..114..
-...*......"#;
-        let expected = 467;
-
-        let cur = Cursor::new(input.as_bytes());
-        let result = part2(cur).unwrap();
-
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn partial_id_after() {
-        let input = r#"...*......
+...*......
 ..35..633."#;
-        let expected = 35;
+        let expected = 467 * 35;
 
         let cur = Cursor::new(input.as_bytes());
         let result = part2(cur).unwrap();
@@ -131,23 +132,23 @@ mod test_part_2 {
         assert_eq!(result, expected);
     }
 
-    #[test]
-    fn partial_same_line() {
-        let input = r"617*......";
-        let expected = 617;
-
-        let cur = Cursor::new(input.as_bytes());
-        let result = part2(cur).unwrap();
-
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn partial_nothing() {
-        let input = r#"617*......
-.....+.58."#;
+    #[rstest]
+    #[case(r"617*......")]
+    #[case(r"617*.1....")]
+    #[case(r"617&11....")]
+    fn partial_nothing(#[case] input: &str) {
         let expected = 0;
 
+        let cur = Cursor::new(input.as_bytes());
+        let result = part2(cur).unwrap();
+
+        assert_eq!(result, expected);
+    }
+
+    #[rstest]
+    #[case(r".17*2.....", 34)]
+    #[case(r".17*2..3*2", 40)]
+    fn partial_same_line(#[case] input: &str, #[case] expected: usize) {
         let cur = Cursor::new(input.as_bytes());
         let result = part2(cur).unwrap();
 
