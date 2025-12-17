@@ -1,8 +1,7 @@
 use crate::parts::parse_line;
-use std::collections::{HashMap,HashSet};
+use std::collections::{HashMap, HashSet};
 use std::io::BufRead;
 use std::vec;
-//use tracing::debug;
 
 struct Cog {
     x: usize,
@@ -11,10 +10,8 @@ struct Cog {
 
 pub fn part2<R: BufRead>(reader: R) -> Result<usize, Box<dyn std::error::Error>> {
     let mut acc = 0;
-
     let mut cogs = Vec::new();
-
-    let mut numbers: HashMap<(usize, usize), usize> = HashMap::new();
+    let mut numbers_lookup: HashMap<(usize, usize), usize> = HashMap::new();
 
     for (y, line) in reader.lines().enumerate() {
         let line = line.unwrap();
@@ -22,10 +19,7 @@ pub fn part2<R: BufRead>(reader: R) -> Result<usize, Box<dyn std::error::Error>>
         let (part_numbers, parts) = parse_line(line.as_str());
         for part_number in part_numbers.iter() {
             for x in part_number.from..part_number.to {
-                numbers.insert(
-                    (x, y),
-                    part_number.id,
-                );
+                numbers_lookup.insert((x, y), part_number.id);
             }
         }
         for part in parts.iter() {
@@ -40,43 +34,39 @@ pub fn part2<R: BufRead>(reader: R) -> Result<usize, Box<dyn std::error::Error>>
     }
 
     for cog in cogs {
-        let touching_numbers= positions_around(cog.x, cog.y)
-        .iter().map(| pos | -> usize {
-            if let Some(n) = numbers.get(pos) {
-                return *n;
-            }
-            0
-        })
-        .filter(| n | -> bool {
-            *n != 0
-        })
-        .collect::<HashSet<_>>()
-        .into_iter()
-        .collect::<Vec<usize>>();
+        let touching_numbers = positions_around(cog.x, cog.y)
+            .iter()
+            .map(|pos| -> usize {
+                if let Some(n) = numbers_lookup.get(pos) {
+                    return *n;
+                }
+                0
+            })
+            .filter(|n| -> bool { *n != 0 })
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect::<Vec<usize>>();
 
         if touching_numbers.len() != 2 {
-            continue
+            continue;
         }
-
         acc += touching_numbers[0] * touching_numbers[1];
     }
 
     Ok(acc)
 }
 
-fn positions_around(x:usize, y:usize) -> Vec<(usize,usize)> {
+fn positions_around(x: usize, y: usize) -> Vec<(usize, usize)> {
     vec![
         (x.saturating_sub(1), y.saturating_sub(1)),
         (x, y.saturating_sub(1)),
         (x + 1, y.saturating_sub(1)),
-
         (x.saturating_sub(1), y),
         // x,y
         (x + 1, y),
-
         (x.saturating_sub(1), y + 1),
         (x, y + 1),
-        (x + 1,  y + 1),
+        (x + 1, y + 1),
     ]
 }
 
@@ -144,7 +134,6 @@ mod test_part_2 {
 
         assert_eq!(result, expected);
     }
-
 
     #[rstest]
     #[case(r"617*......")]
