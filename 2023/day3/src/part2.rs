@@ -32,25 +32,24 @@ pub fn part2<R: BufRead>(reader: R) -> Result<usize, Box<dyn std::error::Error>>
         );
     }
 
-    for cog in cogs {
-        let touching_numbers = positions_around(cog.x, cog.y)
-            .iter()
-            .map(|pos| -> usize {
-                if let Some(n) = numbers_lookup.get(pos) {
-                    return *n;
-                }
-                0
-            })
-            .filter(|n| -> bool { *n != 0 })
-            .collect::<HashSet<_>>()
-            .into_iter()
-            .collect::<Vec<usize>>();
-
-        if touching_numbers.len() != 2 {
-            continue;
-        }
-        acc += touching_numbers[0] * touching_numbers[1];
-    }
+    acc += cogs.iter()
+    .map(| cog | -> Vec<usize> {
+        positions_around(cog.x, cog.y).iter()
+        .map(|pos| -> usize {
+            if let Some(n) = numbers_lookup.get(pos) {
+                return *n;
+            }
+            0
+        })
+        .filter(|n| -> bool { *n != 0 })
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect::<Vec<usize>>()
+    })
+    .filter(| v | -> bool { v.len() == 2 })
+    .fold(0, | acc, v | -> usize {
+        acc + v[0] * v[1]
+    });
 
     Ok(acc)
 }
