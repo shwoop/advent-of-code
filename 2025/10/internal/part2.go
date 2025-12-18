@@ -46,7 +46,7 @@ func printHistory(w *strings.Builder, h *History) *strings.Builder {
 }
 
 type Accumulator struct {
-	masks         [][]int
+	// masks         [][]int
 	shortestDepth int
 	maskMap       map[string][][]int
 
@@ -87,7 +87,7 @@ func (d Doc) SolvePart2() int {
 	}
 
 	acc := Accumulator{
-		masks:         d.buttonsArrays,
+		// masks:         d.buttonsArrays,
 		shortestDepth: math.MaxInt,
 		maskMap:       maskMap,
 	}
@@ -100,9 +100,9 @@ func (d Doc) SolvePart2() int {
 func AllPossibleBitPatterns(ba []int) []string {
 	result := []string{}
 
-	r := []string{"X"}
+	r := []string{"#"}
 	if ba[0] == 0 {
-		r = append(r, "0")
+		r = append(r, ".")
 	}
 
 	if len(ba) == 1 {
@@ -117,6 +117,18 @@ func AllPossibleBitPatterns(ba []int) []string {
 	}
 
 	return result
+}
+
+func buildLightPatternString(pattern []int) string {
+	b := strings.Builder{}
+	for _, p := range pattern {
+		if p == 0 {
+			b.WriteRune('.')
+			continue
+		}
+		b.WriteRune('#')
+	}
+	return b.String()
 }
 
 func solvePart2(depth int, pattern, mask []int, acc *Accumulator) {
@@ -141,7 +153,10 @@ func solvePart2(depth int, pattern, mask []int, acc *Accumulator) {
 		return
 	}
 
-	for _, mask := range acc.masks {
+	lp := buildLightPatternString(pattern)
+	potentialMasks := acc.maskMap[lp]
+
+	for _, mask := range potentialMasks {
 		solvePart2(depth+1, pattern, mask, acc)
 	}
 }
