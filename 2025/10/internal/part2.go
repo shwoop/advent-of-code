@@ -70,17 +70,12 @@ func solvePart2(depth int, pattern, mask []int, acc *Accumulator) {
 		return
 	}
 
-	localPattern := make([]int, len(pattern))
+	// localPattern := make([]int, len(pattern))
 
-	var zeroes int
-	for i := range len(localPattern) {
-		localPattern[i] = pattern[i] - mask[i]
-		if localPattern[i] < 0 {
-			return
-		}
-		if localPattern[i] == 0 {
-			zeroes++
-		}
+	zeroes, cont := applyMask(pattern, mask)
+	defer reverseMask(pattern, mask)
+	if !cont {
+		return
 	}
 
 	if zeroes == len(pattern) {
@@ -90,7 +85,27 @@ func solvePart2(depth int, pattern, mask []int, acc *Accumulator) {
 	}
 
 	for _, mask := range acc.masks {
-		solvePart2(depth+1, localPattern, mask, acc)
+		solvePart2(depth+1, pattern, mask, acc)
+	}
+}
+
+func applyMask(pattern, mask []int) (int, bool) {
+	var zeroes int
+	for i := range len(pattern) {
+		pattern[i] -= mask[i]
+		if pattern[i] < 0 {
+			return 0, false
+		}
+		if pattern[i] == 0 {
+			zeroes++
+		}
+	}
+	return zeroes, true
+}
+
+func reverseMask(pattern, mask []int) {
+	for i := range len(pattern) {
+		pattern[i] += mask[i]
 	}
 }
 

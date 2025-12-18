@@ -12,10 +12,10 @@ func main() {
 		slog.SetLogLoggerLevel(slog.LevelDebug)
 	}
 
-	// if os.Getenv("PART") == "2" {
-	// 	internal.Part2(input)
-	// 	return
-	// }
+	if os.Getenv("PART") == "2" {
+		internal.Part2(input)
+		return
+	}
 	internal.Part1(input)
 }
 
