@@ -136,10 +136,10 @@ func solvePart2(depth int, pattern, mask []int, acc *Accumulator) {
 		return
 	}
 
-	acc.history = acc.history.Push(mask, pattern)
-	defer func() {
-		acc.history = acc.history.Pop()
-	}()
+	// acc.history = acc.history.Push(mask, pattern)
+	// defer func() {
+	// 	acc.history = acc.history.Pop()
+	// }()
 
 	zeroes, cont := applyMask(pattern, mask)
 	defer reverseMask(pattern, mask)
@@ -148,7 +148,7 @@ func solvePart2(depth int, pattern, mask []int, acc *Accumulator) {
 	}
 
 	if zeroes == len(pattern) {
-		fmt.Println(acc.history)
+		// fmt.Println(acc.history)
 		acc.shortestDepth = depth
 		return
 	}
