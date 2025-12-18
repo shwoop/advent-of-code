@@ -47,7 +47,7 @@ func (d Doc) String() string {
 	return b.String()
 }
 
-func (d Doc) Solve() int {
+func (d Doc) SolvePart1() int {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -117,7 +117,7 @@ func Part1(in string) int {
 	for s.Scan() {
 		doc := ParseDoc(s.Text())
 		fmt.Printf("%s\n", doc)
-		acc += doc.Solve()
+		acc += doc.SolvePart1()
 	}
 
 	fmt.Printf("part1 acc: %d\n", acc)
