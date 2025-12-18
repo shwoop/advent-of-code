@@ -61,16 +61,14 @@ func (d Doc) SolvePart2() int {
 }
 
 func solvePart2(depth int, pattern, mask []int, acc *Accumulator) {
-	acc.history = acc.history.Push(mask, pattern)
-	defer func() {
-		acc.history = acc.history.Pop()
-	}()
-
 	if depth >= acc.shortestDepth {
 		return
 	}
 
-	// localPattern := make([]int, len(pattern))
+	acc.history = acc.history.Push(mask, pattern)
+	defer func() {
+		acc.history = acc.history.Pop()
+	}()
 
 	zeroes, cont := applyMask(pattern, mask)
 	defer reverseMask(pattern, mask)
