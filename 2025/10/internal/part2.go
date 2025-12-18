@@ -50,6 +50,9 @@ type Accumulator struct {
 	shortestDepth int
 	maskMap       map[string][][]int
 
+	lightPatternMask           string
+	lightPatternMaskForNZeroes int
+
 	history *History
 }
 
@@ -153,8 +156,11 @@ func solvePart2(depth int, pattern, mask []int, acc *Accumulator) {
 		return
 	}
 
-	lp := buildLightPatternString(pattern)
-	potentialMasks := acc.maskMap[lp]
+	if acc.lightPatternMask == "" || zeroes != acc.lightPatternMaskForNZeroes {
+		acc.lightPatternMask = buildLightPatternString(pattern)
+	}
+
+	potentialMasks := acc.maskMap[acc.lightPatternMask]
 
 	for _, mask := range potentialMasks {
 		solvePart2(depth+1, pattern, mask, acc)
