@@ -1,5 +1,9 @@
+use rayon::prelude::*;
 use std::collections::LinkedList;
-use std::io::BufRead;
+use std::env;
+use std::io::{BufRead, Lines};
+use std::sync::Arc;
+use std::thread;
 
 struct IdMappingRange {
     source_gte: usize,
@@ -33,23 +37,93 @@ pub fn part2<R: BufRead>(reader: R) -> Result<usize, Box<dyn std::error::Error>>
     let mut lines: std::io::Lines<R> = reader.lines();
 
     let first_line = lines.next().unwrap()?;
-
     let Some((_, seeds)) = first_line.split_once(":") else {
         panic!("cannot parse seeds");
     };
 
-    let seed_ranges: Vec<(usize, usize)> = seeds
-        .split_whitespace()
+    let seed_ranges = parse_seed_ranges(seeds);
+    let mappings = Arc::new(parse_mappings(lines));
+
+    let mut min: usize = usize::MAX;
+
+    let mut handles = Vec::new();
+
+    if env::var("RAY").is_ok() {
+        let min = seed_ranges
+            .par_iter()
+            .flat_map(|(from, to)| *from..*to)
+            .map(|seed_id| {
+                mappings
+                    .iter()
+                    .fold(seed_id, |id, mapping| mapping.apply(id))
+            })
+            .min()
+            .unwrap();
+
+        return Ok(min);
+    }
+
+    // 26s run time by default
+    let mut ranges: Box<dyn Iterator<Item = (usize, usize)>> =
+        Box::new(seed_ranges.iter().cloned());
+
+    if let Ok(s) = env::var("CHUNK")
+        && let Ok(chunk) = s.parse::<usize>()
+    {
+        ranges = Box::new(
+            seed_ranges
+                .iter()
+                .flat_map(move |(from, to)| -> Vec<(usize, usize)> {
+                    (*from..*to)
+                        .step_by(chunk)
+                        .map(|x| (x, (x + chunk).min(*to)))
+                        .collect()
+                }),
+        );
+    }
+
+    for (from, to) in ranges {
+        let mappings = Arc::clone(&mappings);
+
+        handles.push(thread::spawn(move || -> usize {
+            // println!("spawned thread for {} -> {}", from, to);
+            (from..to)
+                .map(|seed_id| {
+                    mappings
+                        .iter()
+                        .fold(seed_id, |id, mapping| mapping.apply(id))
+                })
+                .min()
+                .unwrap()
+        }))
+    }
+
+    for handle in handles {
+        let Ok(m) = handle.join() else {
+            panic!("ffs");
+        };
+        if m < min {
+            min = m;
+        }
+    }
+
+    Ok(min)
+}
+
+fn parse_seed_ranges(line: &str) -> Vec<(usize, usize)> {
+    line.split_whitespace()
         .map(|x| -> usize { x.parse::<usize>().unwrap() })
         .collect::<Vec<usize>>()
         .chunks_exact(2)
         .map(|c| -> (usize, usize) { (c[0], c[0] + c[1]) })
-        .inspect(|(lower, upper)| {
-            println!("parsed range: ({}, {}) {}", lower, upper, upper - lower)
-        })
-        .collect();
+        // .inspect(|(lower, upper)| {
+        //     println!("parsed range: ({}, {}) {}", lower, upper, upper - lower)
+        // })
+        .collect()
+}
 
-    let mappings: Vec<IdMapping> = lines
+fn parse_mappings<R: BufRead>(lines: Lines<R>) -> Vec<IdMapping> {
+    lines
         .map(|line: Result<String, std::io::Error>| line.unwrap())
         .filter(|line| !line.is_empty())
         .fold(LinkedList::<IdMapping>::new(), |mut acc, line| {
@@ -84,25 +158,7 @@ pub fn part2<R: BufRead>(reader: R) -> Result<usize, Box<dyn std::error::Error>>
         })
         .into_iter()
         .rev()
-        .collect();
-
-    let mut min: usize = usize::MAX;
-
-    for seed_id in seed_ranges
-        .iter()
-        .inspect(|a| println!("range: {:?}", a))
-        .flat_map(|(lower, upper)| *lower..*upper)
-    // .inspect(|a| println!("n: {:?}", a))
-    {
-        let modified_seed_id = mappings
-            .iter()
-            .fold(seed_id, |id, mapping| mapping.apply(id));
-        if modified_seed_id < min {
-            min = modified_seed_id
-        }
-    }
-
-    Ok(min)
+        .collect()
 }
 
 #[cfg(test)]
